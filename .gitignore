@@ -1,0 +1,48 @@
+# --- Byte-compiled / optimized / DLL files ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# --- Virtual Environments ---
+venv/
+.venv/
+env/
+ENV/
+conda-env/
+
+# --- MLflow & Experiment Tracking Artifacts (Local) ---
+mlruns/
+mlartifacts/
+mlflow.db
+
+# --- Jupyter Notebook Checkpoints ---
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# --- Testing & Coverage Reports ---
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# --- Model Artifacts (Ignore temp models, keep final production pipeline) ---
+models/*.pkl
+models/*.joblib
+models/*.onnx
+!models/heart_disease_pipeline.pkl
+
+# --- Data (Keep small UCI raw CSV, ignore large temp dumps) ---
+data/temp/
+*.tmp
+
+# --- IDE & OS Specific Files ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Environment Variables & Secrets ---
+.env
+.env.local
+ 
