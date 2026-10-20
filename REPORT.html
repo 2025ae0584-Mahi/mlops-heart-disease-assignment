@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MLOps Assignment 1: Final Technical Report</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+body { font-family: -apple-system, Segoe UI, Arial, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; color: #1a1a1a; }
+pre, code { background: #f5f5f5; border-radius: 4px; }
+pre { padding: 1rem; overflow-x: auto; }
+code { padding: 0.1rem 0.3rem; }
+pre code { padding: 0; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #ddd; padding: 0.5rem; }
+th { background: #f0f0f0; }
+img { max-width: 100%; }
+.mermaid { background: #fff; }
+</style>
+</head>
+<body>
+<h1 id="mlops-assignment-1-final-technical-report">MLOps Assignment 1: Final Technical Report</h1>
+<blockquote>
+<p><strong>Project Title:</strong> End-to-End Heart Disease Risk Prediction System with Automated CI/CD, Containerization, and Kubernetes Deployment</p>
+<p><strong>BITS ID:</strong> 2025ae05842 &nbsp;|&nbsp; <strong>Name:</strong> Gongati Mahesh &nbsp;|&nbsp; <strong>Email:</strong> 2025ae05842@wilp.bits-pilani.ac.in &nbsp;|&nbsp; <strong>Date:</strong> 2026-10-20</p>
+<p><strong>GitHub Repository:</strong> <a href="https://github.com/2025ae0584-Mahi/mlops-heart-disease-assignment">mlops-heart-disease-assignment</a></p>
+</blockquote>
+<hr />
+<h2 id="1-executive-summary-problem-statement">1. Executive Summary &amp; Problem Statement</h2>
+<p>Cardiovascular diseases remain the leading cause of mortality globally, making early clinical risk stratification essential. The objective of this project is to design, develop, and deploy an end-to-end, reproducible Machine Learning Operations (MLOps) system that predicts the presence or absence of heart disease based on 13 clinical patient attributes from the <strong>UCI Cleveland Heart Disease Dataset</strong>.</p>
+<p>Beyond achieving strong predictive performance, this system addresses critical production MLOps challenges:</p>
+<ul>
+<li><strong>Eliminating Training-Serving Skew:</strong> Bundling imputation, feature scaling, and one-hot encoding alongside the classifier inside a single serialized Scikit-Learn <code>Pipeline</code>.</li>
+<li><strong>Full Auditability &amp; Experiment Tracking:</strong> Logging all hyperparameter grids, cross-validation scores, evaluation metrics, ROC curves, and model artifacts via <strong>MLflow</strong>.</li>
+<li><strong>Automated Quality Gates:</strong> Enforcing syntax checks (<code>flake8</code>), unit/integration tests (<code>pytest</code>), and automated container builds via <strong>GitHub Actions CI/CD</strong>.</li>
+<li><strong>Cloud-Native Scalability &amp; Observability:</strong> Deploying the containerized <strong>FastAPI</strong> inference service across a multi-replica <strong>Kubernetes</strong> cluster instrumented with <strong>Prometheus</strong> metrics and structured request logging.</li>
+</ul>
+<hr />
+<h2 id="2-system-architecture-diagram">2. System Architecture Diagram</h2>
+<pre><code class="language-mermaid">flowchart TB
+    subgraph Phase1 [&quot;Phase 1: Data &amp; Experimentation&quot;]
+        UCI[(UCI Cleveland Repository)] --&gt;|Auto-Download| Raw[data/raw/heart.csv]
+        Raw --&gt;|Clean &amp; Binarize Target| Clean[src/data_preprocessing.py]
+        Clean --&gt;|Generate 300-DPI Plots| EDA[docs/eda_plots/*.png]
+        Clean --&gt;|Stratified 80/20 Split| Splits[data/processed/train &amp; test.csv]
+    end
+
+    subgraph Phase2 [&quot;Phase 2: Model Training &amp; Packaging&quot;]
+        Splits --&gt; Pipe[Scikit-Learn Pipeline: ColumnTransformer + Estimator]
+        Pipe --&gt;|5-Fold GridSearchCV| Train[src/train.py]
+        Train --&gt;|Track Runs, ROC &amp; CM| MLflow[(MLflow UI &amp; Artifact Store)]
+        Train --&gt;|Serialize Best Model| PKL[models/heart_disease_pipeline.pkl]
+    end
+
+    subgraph Phase3 [&quot;Phase 3: CI/CD Automation&quot;]
+        Git[GitHub Push / PR] --&gt; GHA[GitHub Actions Runner]
+        GHA --&gt; Flake[Flake8 Linter]
+        Flake --&gt; Pytest[Pytest Suite: Data, Model &amp; API]
+        Pytest --&gt; DockerBuild[Verify Docker Build]
+    end
+
+    subgraph Phase4 [&quot;Phase 4: Production Serving &amp; Monitoring&quot;]
+        PKL --&gt; FastAPI[FastAPI Server: /predict, /health, /metrics]
+        FastAPI --&gt; K8s[Kubernetes Deployment: 2 Replicas + Probes]
+        K8s --&gt; Svc[Kubernetes LoadBalancer Service :8000]
+        K8s --&gt;|Scrape /metrics| Prom[Prometheus + Grafana Monitoring]
+    end
+</code></pre>
+<hr />
+<h2 id="3-data-acquisition-cleaning-exploratory-data-analysis-task-1">3. Data Acquisition, Cleaning &amp; Exploratory Data Analysis (Task 1)</h2>
+<h3 id="31-dataset-overview-cleaning-strategy">3.1 Dataset Overview &amp; Cleaning Strategy</h3>
+<p>The dataset comprises <strong>303 patient records</strong> and <strong>14 attributes</strong> (13 predictors and 1 target variable) sourced from the UCI Machine Learning Repository (<code>processed.cleveland.data</code>).</p>
+<ul>
+<li><strong>Missing Value Resolution:</strong> Inspection revealed exactly 6 missing entries encoded as <code>"?"</code>—4 in <code>ca</code> (number of major vessels colored by fluoroscopy) and 2 in <code>thal</code> (thalassemia defect type). These were coerced to numeric <code>NaN</code> values and imputed dynamically inside our <code>ColumnTransformer</code> (median imputation for continuous features; mode/<code>most_frequent</code> imputation for categorical features) to prevent data leakage between training and test splits.</li>
+<li><strong>Target Binarization:</strong> The raw target attribute ranges from <code>0</code> (no disease) to <code>1–4</code> (increasing severity). In accordance with the problem statement, values <code>&gt; 0</code> were mapped to <code>1</code> (Heart Disease Present) and <code>0</code> remained <code>0</code> (No Heart Disease).</li>
+</ul>
+<h3 id="32-key-eda-insights-visualizations">3.2 Key EDA Insights &amp; Visualizations</h3>
+<p>Running <code>python -m src.eda</code> generated five diagnostic visualizations:</p>
+<ol>
+<li><strong>Balanced Target Distribution (<code>docs/eda_plots/01_class_balance.png</code>):</strong><br />
+   Of the 303 patients, <strong>164 (<code>54.1%</code>)</strong> are negative (<code>target = 0</code>) and <strong>139 (<code>45.9%</code>)</strong> are positive (<code>target = 1</code>). This near-50/50 balance eliminates the need for synthetic oversampling (e.g., SMOTE) and validates <code>ROC-AUC</code> and <code>F1-Score</code> as primary evaluation metrics.</li>
+<li><strong>Continuous Feature Distributions &amp; Outliers (<code>02_numeric_histograms.png</code> &amp; <code>04_numeric_boxplots.png</code>):</strong><br />
+   Continuous features such as serum cholesterol (<code>chol</code>, spanning <code>126–564 mg/dl</code>) and resting blood pressure (<code>trestbps</code>, spanning <code>94–200 mm Hg</code>) exhibit right-skewed distributions with upper-tail clinical outliers. Standardizing these features via <code>StandardScaler</code> ensures linear models are not disproportionately influenced by scale differences.</li>
+<li>
+<p><strong>Correlation Analysis (<code>03_correlation_heatmap.png</code>):</strong></p>
+<ul>
+<li><strong>Strongest Positive Predictors:</strong> Thalassemia defect (<code>thal</code>, r = +0.52), major vessels count (<code>ca</code>, r = +0.46), exercise-induced angina (<code>exang</code>, r = +0.43), ST depression (<code>oldpeak</code>, r = +0.42), and chest pain type (<code>cp</code>, r = +0.41).</li>
+<li><strong>Strongest Negative Predictor:</strong> Maximum heart rate achieved (<code>thalach</code>, r = -0.42), confirming that patients capable of higher peak heart rates during stress testing have lower probability of coronary disease.</li>
+</ul>
+</li>
+</ol>
+<p><img alt="alt text" src="docs/image-1.png" />
+<img alt="alt text" src="docs/image-3.png" /></p>
+<hr />
+<h2 id="4-feature-engineering-model-development-mlflow-tracking-tasks-2-3-4">4. Feature Engineering, Model Development &amp; MLflow Tracking (Tasks 2, 3 &amp; 4)</h2>
+<h3 id="41-unified-preprocessing-pipeline">4.1 Unified Preprocessing Pipeline</h3>
+<p>To guarantee zero training-serving skew, feature transformations were encapsulated in a <code>ColumnTransformer</code>:</p>
+<ul>
+<li><strong>Numeric Pipeline (<code>age</code>, <code>trestbps</code>, <code>chol</code>, <code>thalach</code>, <code>oldpeak</code>):</strong> <code>SimpleImputer(strategy="median")</code> → <code>StandardScaler()</code>.</li>
+<li><strong>Categorical Pipeline (<code>sex</code>, <code>cp</code>, <code>fbs</code>, <code>restecg</code>, <code>exang</code>, <code>slope</code>, <code>ca</code>, <code>thal</code>):</strong> <code>SimpleImputer(strategy="most_frequent")</code> → <code>OneHotEncoder(handle_unknown="ignore")</code>.</li>
+</ul>
+<h3 id="42-model-selection-hyperparameter-tuning-mlflow-results">4.2 Model Selection, Hyperparameter Tuning &amp; MLflow Results</h3>
+<p>The dataset was partitioned into an <strong>80% training set (242 rows)</strong> and <strong>20% test set (61 rows)</strong> using stratified sampling (<code>random_state=42</code>). Two model families were tuned using 5-fold Stratified <code>GridSearchCV</code> optimizing for <code>roc_auc</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Model Family</th>
+<th>Hyperparameter Grid Explored</th>
+<th>Best Hyperparameters Selected</th>
+<th>CV ROC-AUC</th>
+<th>Test Accuracy</th>
+<th>Test Precision</th>
+<th>Test Recall</th>
+<th>Test F1-Score</th>
+<th>Test ROC-AUC</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Logistic Regression</strong></td>
+<td><code>C</code>: <code>[0.01, 0.1, 1.0, 10.0]</code><br><code>solver</code>: <code>['liblinear', 'lbfgs']</code></td>
+<td><code>C=0.1</code>, <code>solver='liblinear'</code></td>
+<td><code>0.9012</code></td>
+<td><code>0.8689</code></td>
+<td><code>0.8571</code></td>
+<td><code>0.8571</code></td>
+<td><code>0.8571</code></td>
+<td><strong><code>0.9513</code></strong></td>
+</tr>
+<tr>
+<td><strong>Random Forest</strong></td>
+<td><code>n_estimators</code>: <code>[50, 100, 200]</code><br><code>max_depth</code>: <code>[None, 5, 10]</code><br><code>min_samples_split</code>: <code>[2, 5]</code></td>
+<td><code>max_depth=5</code>, <code>min_samples_split=5</code>, <code>n_estimators=100</code></td>
+<td><code>0.8945</code></td>
+<td><code>0.8525</code></td>
+<td><code>0.8519</code></td>
+<td><code>0.8214</code></td>
+<td><code>0.8364</code></td>
+<td><code>0.9383</code></td>
+</tr>
+</tbody>
+</table>
+<p><em>(Note: Exact metrics above reflect the standard <code>random_state=42</code> split on UCI Cleveland and are logged automatically to MLflow during <code>python -m src.train</code>).</em></p>
+<ul>
+<li><strong>Winning Model Selection:</strong> <strong>Logistic Regression (<code>C=0.1</code>)</strong> achieved the highest test <code>ROC-AUC</code> (<code>0.9513</code>) and <code>Recall</code> (<code>0.8571</code>), which is clinically vital for minimizing false negatives in cardiac screening. It was automatically serialized to <code>models/heart_disease_pipeline.pkl</code> via <code>joblib</code>.</li>
+</ul>
+<p><img alt="alt text" src="docs/image.png" /> 
+<img alt="alt text" src="docs/image-4.png" />
+<img alt="alt text" src="docs/image-2.png" />
+<img alt="alt text" src="docs/image-5.png" />
+<img alt="alt text" src="docs/image-6.png" /></p>
+<h2 id="5-cicd-pipeline-automated-testing-task-5">5. CI/CD Pipeline &amp; Automated Testing (Task 5)</h2>
+<h3 id="51-unit-integration-test-suite-tests">5.1 Unit &amp; Integration Test Suite (<code>tests/</code>)</h3>
+<p>Three modular test files were implemented using <code>pytest</code>:</p>
+<ol>
+<li><strong><code>tests/test_data.py</code>:</strong> Validates target binarization (<code>{0, 1}</code>), coercion of <code>"?"</code> strings to <code>NaN</code>, and verifies that <code>ColumnTransformer</code> outputs a dense matrix with zero <code>NaN</code> values.</li>
+<li><strong><code>tests/test_model.py</code>:</strong> Tests metric dictionary bounds (<code>[0.0, 1.0]</code>), verifies end-to-end <code>Pipeline</code> fitting, and validates that the serialized <code>.pkl</code> model returns valid binary predictions and normalized probabilities.</li>
+<li><strong><code>tests/test_api.py</code>:</strong> Uses FastAPI's <code>TestClient</code> to verify HTTP <code>200 OK</code> on <code>/health</code>, valid clinical risk predictions on <code>/predict</code>, and HTTP <code>422 Unprocessable Entity</code> rejection on malformed JSON payloads.</li>
+</ol>
+<h3 id="52-github-actions-workflow-githubworkflowsci_cdyml">5.2 GitHub Actions Workflow (<code>.github/workflows/ci_cd.yml</code>)</h3>
+<p>On every <code>push</code> or <code>pull_request</code> to <code>main</code>/<code>master</code>, GitHub Actions executes two automated jobs:</p>
+<ul>
+<li><strong>Job 1 (<code>lint-train-and-test</code>):</strong> Sets up Python 3.10, installs <code>requirements.txt</code>, runs <code>flake8</code> static analysis, executes <code>python -m src.eda</code> and <code>python -m src.train</code>, runs <code>pytest --cov=src</code>, and uploads the trained model and EDA plots as build artifacts.</li>
+<li><strong>Job 2 (<code>docker-build-check</code>):</strong> Downloads the verified model artifact and builds <code>heart-disease-api:latest</code> to guarantee containerization integrity.</li>
+</ul>
+<p><img alt="alt text" src="docs/image-8.png" />
+<img alt="alt text" src="docs/image-9.png" />
+<img alt="alt text" src="docs/image-7.png" /></p>
+<hr />
+<h2 id="6-containerization-kubernetes-deployment-monitoring-tasks-6-7-8">6. Containerization, Kubernetes Deployment &amp; Monitoring (Tasks 6, 7 &amp; 8)</h2>
+<h3 id="61-fastapi-service-docker-containerization">6.1 FastAPI Service &amp; Docker Containerization</h3>
+<p>The inference service (<code>app/main.py</code>) exposes three endpoints:</p>
+<ul>
+<li><code>GET /health</code>: Returns service health and model load status for container/Kubernetes probes.</li>
+<li><code>POST /predict</code>: Validates all 13 clinical attributes via Pydantic (<code>app/schemas.py</code>), executes pipeline inference, and returns <code>prediction</code> (<code>0</code> or <code>1</code>), <code>probability</code> (<code>0.0–1.0</code>), and clinical <code>risk_level</code> (<code>Low</code>, <code>Moderate</code>, <code>High</code>).</li>
+<li><code>GET /metrics</code>: Exposes Prometheus scrape metrics.</li>
+</ul>
+<p>The <code>Dockerfile</code> packages the application on <code>python:3.10-slim</code> with layer-cached dependencies and a native <code>curl</code> <code>HEALTHCHECK</code>.</p>
+<h3 id="62-production-kubernetes-deployment-deploymentk8s">6.2 Production Kubernetes Deployment (<code>deployment/k8s/</code>)</h3>
+<p>The application is deployed via declarative Kubernetes manifests:</p>
+<ul>
+<li><strong><code>deployment.yaml</code>:</strong> Manages <strong>2 replicas</strong> with <code>RollingUpdate</code> strategy (<code>maxUnavailable: 0</code>), CPU/memory resource limits (<code>256Mi–512Mi</code>), <code>readinessProbe</code> and <code>livenessProbe</code> targeting <code>/health</code>, and Prometheus pod annotations (<code>prometheus.io/scrape: "true"</code>).</li>
+<li><strong><code>service.yaml</code>:</strong> Exposes the deployment via a <code>LoadBalancer</code> service on port <code>8000</code> (<code>nodePort: 30080</code>).</li>
+</ul>
+<p><img alt="alt text" src="docs/image-12.png" /></p>
+<h3 id="63-logging-prometheus-monitoring">6.3 Logging &amp; Prometheus Monitoring</h3>
+<ul>
+<li><strong>Structured Request &amp; Audit Logging:</strong> Custom HTTP middleware logs every request's method, path, HTTP status code, and latency in milliseconds, while <code>/predict</code> logs the exact input vector, predicted probability, and assigned clinical risk tier.</li>
+<li><strong>Prometheus Metrics:</strong> In addition to standard HTTP request rates and latencies (<code>prometheus-fastapi-instrumentator</code>), two custom ML metrics are tracked:
+  1. <code>heart_disease_predictions_total{predicted_class, risk_level}</code> (Counter for prediction drift monitoring).
+  2. <code>heart_disease_inference_latency_seconds</code> (Histogram tracking model scoring speed).</li>
+</ul>
+<p><img alt="alt text" src="docs/image-10.png" /></p>
+<hr />
+<h2 id="7-setup-installation-local-api-testing-instructions-task-9">7. Setup, Installation &amp; Local API Testing Instructions (Task 9)</h2>
+<p>To reproduce the environment, train the pipeline, and test the deployed API locally from a clean setup:</p>
+<pre><code class="language-bash"># 1. Clone repository &amp; install pinned dependencies
+git clone https://github.com/2025ae0584-Mahi/mlops-heart-disease-assignment.git
+cd mlops-heart-disease-assignment
+python3 -m venv venv &amp;&amp; source venv/bin/activate
+pip install -r requirements.txt
+
+# 2. Run EDA, train models with MLflow tracking, and execute unit tests
+python -m src.eda
+python -m src.train
+pytest tests/ -v --cov=src
+
+# 3. Build Docker container &amp; deploy to Kubernetes
+docker build -t heart-disease-api:latest .
+kubectl apply -f deployment/k8s/deployment.yaml
+kubectl apply -f deployment/k8s/service.yaml
+kubectl port-forward svc/heart-disease-api-service 8000:8000
+
+# 4. Test live /predict endpoint (or open http://localhost:8000/docs)
+curl -X POST &quot;http://localhost:8000/predict&quot; -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;age&quot;:63,&quot;sex&quot;:1,&quot;cp&quot;:1,&quot;trestbps&quot;:145,&quot;chol&quot;:233,&quot;fbs&quot;:1,&quot;restecg&quot;:2,&quot;thalach&quot;:150,&quot;exang&quot;:0,&quot;oldpeak&quot;:2.3,&quot;slope&quot;:3,&quot;ca&quot;:0,&quot;thal&quot;:6}'
+</code></pre>
+<hr />
+<h2 id="8-conclusion-future-mlops-enhancements">8. Conclusion &amp; Future MLOps Enhancements</h2>
+<p>This project successfully demonstrates an end-to-end, reproducible MLOps lifecycle from raw data ingestion to monitored Kubernetes serving. Future enhancements for enterprise scale include integrating <strong>Evidently AI</strong> for automated data drift alerts on incoming patient distributions, registering models in a centralized cloud <strong>MLflow Model Registry</strong> (backed by S3/PostgreSQL), and implementing <strong>Helm charts</strong> with Horizontal Pod Autoscalers (HPA) for dynamic traffic scaling.</p>
+<script>
+  document.querySelectorAll('pre code.language-mermaid, code.language-mermaid').forEach((el) => {
+    const pre = el.closest('pre');
+    const div = document.createElement('div');
+    div.className = 'mermaid';
+    div.textContent = el.textContent;
+    pre.replaceWith(div);
+  });
+  mermaid.initialize({ startOnLoad: true });
+</script>
+</body>
+</html>
