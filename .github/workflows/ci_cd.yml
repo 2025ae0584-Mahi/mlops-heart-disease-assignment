@@ -1,0 +1,78 @@
+name: MLOps CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  lint-train-and-test:
+    name: Lint, Train Model & Run Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 2. Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: 3. Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 4. Lint Code with Flake8
+        run: |
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 src/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Exit-zero treats style warnings as non-blocking notifications
+          flake8 src/ tests/ --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
+
+      - name: 5. Run Automated EDA & Model Training Pipeline
+        run: |
+          python -m src.eda
+          python -m src.train
+
+      - name: 6. Execute Unit Tests with Pytest & Coverage
+        run: |
+          pytest tests/ -v --cov=src --cov-report=term-missing
+
+      - name: 7. Upload Trained Model & Plots as CI Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: trained-heart-disease-model
+          path: |
+            models/heart_disease_pipeline.pkl
+            docs/eda_plots/
+
+  docker-build-check:
+    name: Build & Verify Docker Container
+    needs: lint-train-and-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 2. Download Trained Model Artifact from Previous Job
+        uses: actions/download-artifact@v4
+        with:
+          name: trained-heart-disease-model
+          path: .
+
+      - name: 3. Build Docker Image (if Dockerfile exists)
+        run: |
+          if [ -f Dockerfile ]; then
+            # Ensure model is in models/ directory if downloaded at root
+            mkdir -p models
+            if [ -f heart_disease_pipeline.pkl ]; then mv heart_disease_pipeline.pkl models/; fi
+            docker build -t heart-disease-api:latest .
+          else
+            echo "Dockerfile not yet created; skipping container build."
+          fi
+ 
