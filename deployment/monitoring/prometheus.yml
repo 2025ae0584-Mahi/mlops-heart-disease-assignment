@@ -1,0 +1,12 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: "heart-disease-fastapi"
+    metrics_path: "/metrics"
+    static_configs:
+      # Use 'host.docker.internal:8000' when running Prometheus in Docker on Mac/Windows,
+      # or 'heart-disease-api-service:8000' inside Kubernetes
+      - targets: ["localhost:8000", "host.docker.internal:8000"]
+ 

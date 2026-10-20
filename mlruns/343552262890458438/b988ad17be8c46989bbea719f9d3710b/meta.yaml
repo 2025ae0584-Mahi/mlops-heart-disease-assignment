@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/maheshg/Desktop/heart-disease-mlops/mlruns/343552262890458438/b988ad17be8c46989bbea719f9d3710b/artifacts
+end_time: 1792309671049
+entry_point_name: ''
+experiment_id: '343552262890458438'
+lifecycle_stage: active
+run_id: b988ad17be8c46989bbea719f9d3710b
+run_name: Random_Forest
+run_uuid: b988ad17be8c46989bbea719f9d3710b
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1792309668915
+status: 3
+tags: []
+user_id: maheshg
