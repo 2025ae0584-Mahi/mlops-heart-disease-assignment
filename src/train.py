@@ -70,6 +70,10 @@ def train_and_evaluate():
     # Step 2: Configure MLflow Experiment
     mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
 
+    # *** FIX: Set tracking URI to a local path to prevent permission errors in CI/CD ***
+    mlflow.set_tracking_uri("file:./mlruns")
+
+
     # Step 3: Define candidate models and hyperparameter grids (Task 2)
     models_config = {
         "Logistic_Regression": {
