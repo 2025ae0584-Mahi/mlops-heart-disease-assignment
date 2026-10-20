@@ -142,6 +142,7 @@ The application is deployed via declarative Kubernetes manifests:
 * **`service.yaml`:** Exposes the deployment via a `LoadBalancer` service on port `8000` (`nodePort: 30080`).
 
 > **[INSERT SCREENSHOT HERE: Terminal showing `kubectl get pods`, `kubectl get svc`, and a successful `curl -X POST http://localhost:8000/predict` response]**
+![alt text](image-12.png)
 
 ### 6.3 Logging & Prometheus Monitoring
 * **Structured Request & Audit Logging:** Custom HTTP middleware logs every request's method, path, HTTP status code, and latency in milliseconds, while `/predict` logs the exact input vector, predicted probability, and assigned clinical risk tier.
@@ -150,6 +151,7 @@ The application is deployed via declarative Kubernetes manifests:
   2. `heart_disease_inference_latency_seconds` (Histogram tracking model scoring speed).
 
 > **[INSERT SCREENSHOT HERE: Browser/terminal output of `http://localhost:8000/metrics` and `kubectl logs -l app=heart-disease-api`]**
+![alt text](image-10.png)
 
 ---
 

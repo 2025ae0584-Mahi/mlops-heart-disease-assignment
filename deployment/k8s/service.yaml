@@ -12,7 +12,6 @@ spec:
     - name: http
       protocol: TCP
       port: 8000        # Service port inside cluster / LoadBalancer external port
-      targetContainerPort: 8000
       targetPort: 8000  # Container port exposed by Uvicorn
       nodePort: 30080   # Fixed NodePort (30000-32767) for easy Minikube access
  
