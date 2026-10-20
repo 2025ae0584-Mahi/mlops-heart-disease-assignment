@@ -60,12 +60,24 @@ def log_plots_to_mlflow(model, X_test, y_test, y_pred, model_name: str):
     mlflow.log_artifact(roc_path, artifact_path="plots")
 
 
+# def train_and_evaluate():
+#     """Main execution function for training, MLflow logging, and model packaging."""
+#     # Step 1: Load, clean, and split data
+#     raw_df = download_and_load_data()
+#     cleaned_df = clean_data(raw_df)
+#     X_train, X_test, y_train, y_test = prepare_splits(cleaned_df)
+
+#     # Step 2: Configure MLflow Experiment
+#     mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
 def train_and_evaluate():
     """Main execution function for training, MLflow logging, and model packaging."""
     # Step 1: Load, clean, and split data
     raw_df = download_and_load_data()
     cleaned_df = clean_data(raw_df)
     X_train, X_test, y_train, y_test = prepare_splits(cleaned_df)
+
+    # 🌟 CRITICAL FIX: Explicitly set the tracking URI BEFORE doing anything else with MLflow!
+    mlflow.set_tracking_uri("file:./mlruns")
 
     # Step 2: Configure MLflow Experiment
     mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
@@ -92,6 +104,7 @@ def train_and_evaluate():
             }
         }
     }
+ 
 
     best_overall_model = None
     best_overall_auc = -1.0
