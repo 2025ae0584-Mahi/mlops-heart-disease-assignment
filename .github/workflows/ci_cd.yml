@@ -35,8 +35,9 @@ jobs:
 
       - name: 5. Run Automated EDA & Model Training Pipeline
         run: |
+          rm -rf mlruns temp_plots
           python -m src.eda
-          python -m src.train
+          python -m src.train 
 
       - name: 6. Execute Unit Tests with Pytest & Coverage
         run: |
