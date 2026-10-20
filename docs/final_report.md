@@ -3,10 +3,12 @@
 >
 > **BITS ID:** 2025ae05842 &nbsp;|&nbsp; **Name:** Gongati Mahesh &nbsp;|&nbsp; **Email:** 2025ae05842@wilp.bits-pilani.ac.in &nbsp;|&nbsp; **Date:** 2026-10-20
 >
-> **GitHub Repository:** [mlops-heart-disease-assignment](https://github.com/2025ae0584-Mahi/mlops-heart-disease-assignment)
+> **GitHub Repository:** [mlops-heart-disease-assignment](https://github.com/2025ae0584-Mahi/mlops-heart-disease-assignment) 
+
+> **Demo_Link :[MLOPS_DEMO_LINK]( https://drive.google.com/file/d/1VHREl9WWTY7nDdQnxHdMb0GB15JBQSl6/view?usp=drive_link) 
 
 ---
-
+    
 ## 1. Executive Summary & Problem Statement
 Cardiovascular diseases remain the leading cause of mortality globally, making early clinical risk stratification essential. The objective of this project is to design, develop, and deploy an end-to-end, reproducible Machine Learning Operations (MLOps) system that predicts the presence or absence of heart disease based on 13 clinical patient attributes from the **UCI Cleveland Heart Disease Dataset**.
 
@@ -93,8 +95,8 @@ The dataset was partitioned into an **80% training set (242 rows)** and **20% te
 
 | Model Family | Hyperparameter Grid Explored | Best Hyperparameters Selected | CV ROC-AUC | Test Accuracy | Test Precision | Test Recall | Test F1-Score | Test ROC-AUC |
 |---|---|---|---|---|---|---|---|---|
-| **Logistic Regression** | `C`: `[0.01, 0.1, 1.0, 10.0]`<br>`solver`: `['liblinear', 'lbfgs']` | `C=0.1`, `solver='liblinear'` | `0.9012` | `0.8689` | `0.8571` | `0.8571` | `0.8571` | **`0.9513`** |
-| **Random Forest** | `n_estimators`: `[50, 100, 200]`<br>`max_depth`: `[None, 5, 10]`<br>`min_samples_split`: `[2, 5]` | `max_depth=5`, `min_samples_split=5`, `n_estimators=100` | `0.8945` | `0.8525` | `0.8519` | `0.8214` | `0.8364` | `0.9383` |
+| **Logistic Regression** | `C`: `[0.01, 0.1, 1.0, 10.0]`<br>`solver`: `['liblinear', 'lbfgs']` | `C=0.1`, `solver='liblinear'` | `0.8989` | `0.8852` | `0.8387` | `0.9286` | `0.8814` | **`0.9665`** |
+| **Random Forest** | `n_estimators`: `[50, 100, 200]`<br>`max_depth`: `[None, 5, 10]`<br>`min_samples_split`: `[2, 5]` | `max_depth=5`, `min_samples_split=5`, `n_estimators=100` | `0.9043` | `0.8689` | `0.8333` | `0.8929` | `0.8621` | `0.9426` |
 
 *(Note: Exact metrics above reflect the standard `random_state=42` split on UCI Cleveland and are logged automatically to MLflow during `python -m src.train`).*
 
@@ -147,6 +149,7 @@ The application is deployed via declarative Kubernetes manifests:
 * **`deployment.yaml`:** Manages **2 replicas** with `RollingUpdate` strategy (`maxUnavailable: 0`), CPU/memory resource limits (`256Mi–512Mi`), `readinessProbe` and `livenessProbe` targeting `/health`, and Prometheus pod annotations (`prometheus.io/scrape: "true"`).
 * **`service.yaml`:** Exposes the deployment via a `LoadBalancer` service on port `8000` (`nodePort: 30080`).
 
+API_Docs_LINK : [API_DOC]( http://localhost:8000/docs )
 
 ![alt text](image-12.png)
 
@@ -156,6 +159,7 @@ The application is deployed via declarative Kubernetes manifests:
   1. `heart_disease_predictions_total{predicted_class, risk_level}` (Counter for prediction drift monitoring).
   2. `heart_disease_inference_latency_seconds` (Histogram tracking model scoring speed).
 
+Metrics_Link :  [Metrics](http://localhost:8000/metrics)
 
 ![alt text](image-10.png)
 
