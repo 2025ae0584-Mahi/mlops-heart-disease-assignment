@@ -1,4 +1,20 @@
 import os
+from pathlib import Path
+
+# =====================================================================
+# 🌟 CRITICAL MLOPS FIX: Enforce local directories before importing MLflow!
+# =====================================================================
+# Force the working directory to be the actual project root
+project_root = str(Path(__file__).resolve().parent.parent)
+os.chdir(project_root)
+
+# Set these environment variables BEFORE importing mlflow to bypass system `/Users` checks
+os.environ["MLFLOW_TRACKING_URI"] = f"file://{project_root}/mlruns"
+os.environ["MLFLOW_ARTIFACT_URI"] = f"file://{project_root}/mlruns"
+os.environ["MLFLOW_HOME"] = f"{project_root}/.mlflow"
+# =====================================================================
+
+# Now import modules safely
 import joblib
 import mlflow
 import mlflow.sklearn
@@ -60,15 +76,6 @@ def log_plots_to_mlflow(model, X_test, y_test, y_pred, model_name: str):
     mlflow.log_artifact(roc_path, artifact_path="plots")
 
 
-# def train_and_evaluate():
-#     """Main execution function for training, MLflow logging, and model packaging."""
-#     # Step 1: Load, clean, and split data
-#     raw_df = download_and_load_data()
-#     cleaned_df = clean_data(raw_df)
-#     X_train, X_test, y_train, y_test = prepare_splits(cleaned_df)
-
-#     # Step 2: Configure MLflow Experiment
-#     mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
 def train_and_evaluate():
     """Main execution function for training, MLflow logging, and model packaging."""
     # Step 1: Load, clean, and split data
@@ -76,15 +83,11 @@ def train_and_evaluate():
     cleaned_df = clean_data(raw_df)
     X_train, X_test, y_train, y_test = prepare_splits(cleaned_df)
 
-    # 🌟 CRITICAL FIX: Explicitly set the tracking URI BEFORE doing anything else with MLflow!
-    mlflow.set_tracking_uri("file:./mlruns")
+    # Set the tracking URI dynamically using the absolute local path config
+    mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
 
     # Step 2: Configure MLflow Experiment
     mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
-
-    # *** FIX: Set tracking URI to a local path to prevent permission errors in CI/CD ***
-    mlflow.set_tracking_uri("file:./mlruns")
-
 
     # Step 3: Define candidate models and hyperparameter grids (Task 2)
     models_config = {
@@ -104,7 +107,6 @@ def train_and_evaluate():
             }
         }
     }
- 
 
     best_overall_model = None
     best_overall_auc = -1.0
