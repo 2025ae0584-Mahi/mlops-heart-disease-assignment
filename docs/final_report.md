@@ -120,7 +120,9 @@ On every `push` or `pull_request` to `main`/`master`, GitHub Actions executes tw
 * **Job 2 (`docker-build-check`):** Downloads the verified model artifact and builds `heart-disease-api:latest` to guarantee containerization integrity.
 
 > **[INSERT SCREENSHOT HERE: GitHub Actions green checkmarks for `lint-train-and-test` and `docker-build-check` + local `pytest -v --cov=src` terminal output]**
-
+![alt text](image-8.png)
+![alt text](image-9.png)
+![alt text](image-7.png)
 
 ---
 
